@@ -1552,4 +1552,94 @@ task.spawn(function()
     end
 end)
 
+-- =============================================================================
+-- NEW: SECURITY SECTION (placed directly below ATM Farm as requested)
+-- =============================================================================
+local SecuritySection = TabFarm:CreateSection("Security")
+
+local AutoArrestEnabled = false
+local ArrestMode = "CFrame"
+local autoArrestConnection = nil
+
+local function GetOutlawPlayers()
+    local outlaws = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr \~= LocalPlayer and plr:GetAttribute("JobId") == "Outlaw" then
+            table.insert(outlaws, plr)
+        end
+    end
+    return outlaws
+end
+
+local function TeleportToPlayer(target)
+    if not target or not target.Character then return end
+    local root = target.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+
+    local destCFrame = root.CFrame * CFrame.new(0, 5, 2)
+
+    if ArrestMode == "CFrame" then
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        if myRoot then myRoot.CFrame = destCFrame end
+    else
+        myChar:PivotTo(destCFrame)
+    end
+end
+
+local function StartAutoArrest()
+    if autoArrestConnection then autoArrestConnection:Disconnect() end
+    autoArrestConnection = RunService.Heartbeat:Connect(function()
+        if not AutoArrestEnabled then return end
+        local targets = GetOutlawPlayers()
+        if #targets == 0 then return end
+
+        for _, target in ipairs(targets) do
+            if not AutoArrestEnabled then break end
+            local startTime = tick()
+            while (tick() - startTime) < 7 and AutoArrestEnabled do
+                TeleportToPlayer(target)
+                task.wait(0.05)
+            end
+        end
+    end)
+end
+
+local function StopAutoArrest()
+    AutoArrestEnabled = false
+    if autoArrestConnection then
+        autoArrestConnection:Disconnect()
+        autoArrestConnection = nil
+    end
+end
+
+TabFarm:CreateToggle({
+    Name = "Auto Arrest",
+    CurrentValue = false,
+    Flag = "AutoArrestToggle",
+    Callback = function(Value)
+        AutoArrestEnabled = Value
+        if Value then
+            StartAutoArrest()
+            Rayfield:Notify({Title = "Auto Arrest", Content = "Enabled - Cycling Outlaws (7s each)", Duration = 3})
+        else
+            StopAutoArrest()
+            Rayfield:Notify({Title = "Auto Arrest", Content = "Disabled", Duration = 2})
+        end
+    end,
+})
+
+TabFarm:CreateDropdown({
+    Name = "Mode",
+    Options = {"CFrame", "HumanoidRootPart"},
+    CurrentOption = {"CFrame"},
+    MultipleOptions = false,
+    Flag = "ArrestModeDropdown",
+    Callback = function(Options)
+        ArrestMode = Options[1]
+    end,
+})
+
 Rayfield:LoadConfiguration()
