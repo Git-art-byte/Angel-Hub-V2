@@ -1,3 +1,22 @@
+-- // Dynamic Banlist Loader (fetches from your separate GitHub file)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local BANLIST_URL = "https://raw.githubusercontent.com/Git-art-byte/Angel-Hub-V2/refs/heads/main/Banlist.luau"
+
+local BlacklistedIDs = {}
+local success, result = pcall(function()
+    return loadstring(game:HttpGet(BANLIST_URL))()
+end)
+
+if success and typeof(result) == "table" then
+    BlacklistedIDs = result
+end
+
+if table.find(BlacklistedIDs, LocalPlayer.UserId) then
+    LocalPlayer:Kick("You have been from Angel Hub, you can no longer use it.")
+end
+
 if _G.XenoLoaded then
     return
 end
