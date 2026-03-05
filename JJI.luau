@@ -3,7 +3,7 @@ local Window = Fluent:CreateWindow({
     Title = "ANGEL HUB v2 | Jujutsu Incremental " .. Fluent.Version,
     SubTitle = "by Ange",
     TabWidth = 160,
-    Size = UDim2.fromOffset(520, 320),
+    Size = UDim2.fromOffset(520, 380),  -- slightly taller for more toggles
     Acrylic = true, 
     Theme = "Darker",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -34,8 +34,7 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 
 local Section = Tabs.Main:AddSection("Farming")
 
-local farmingLoop = nil
-
+-- Auto Farm Sukuna (existing)
 Tabs.Main:AddToggle("AutoFarmSukuna", {
     Title = "Auto Farm Sukuna (Special Grade Boss)",
     Default = false,
@@ -47,19 +46,11 @@ Tabs.Main:AddToggle("AutoFarmSukuna", {
                 Duration = 4
             })
 
-            -- Start the loop in a separate thread
             task.spawn(function()
                 while task.wait(0.1) do
-                    -- Only continue while toggle is still on
-                    if not Fluent.Options.AutoFarmSukuna.Value then
-                        break
-                    end
-
+                    if not Fluent.Options.AutoFarmSukuna.Value then break end
                     pcall(function()
-                        local args = {
-                            "Special Grade Boss",
-                            "Sukuna"
-                        }
+                        local args = {"Special Grade Boss", "Sukuna"}
                         game:GetService("ReplicatedStorage")
                             :WaitForChild("JJKRemotes")
                             :WaitForChild("ResolveCombat")
@@ -67,18 +58,86 @@ Tabs.Main:AddToggle("AutoFarmSukuna", {
                     end)
                 end
             end)
-
         else
             Fluent:Notify({
                 Title = "Auto Farm",
                 Content = "Stopped",
                 Duration = 3
             })
-            -- No need to manually stop — the while loop checks the toggle value
         end
     end
 })
 
--- You can add more toggles/buttons here later...
+-- ───────────────────────────────────────────────
+--          NEW: AUTO GRADE & AUTO PRESTIGE
+-- ───────────────────────────────────────────────
+
+-- Auto Grade (tries to level up grade repeatedly)
+Tabs.Main:AddToggle("AutoGrade", {
+    Title = "Auto Grade (Upgrade Grade)",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            Fluent:Notify({
+                Title = "Auto Grade",
+                Content = "Started – attempting Grade Up every 1s",
+                Duration = 4
+            })
+
+            task.spawn(function()
+                while task.wait(1) do
+                    if not Fluent.Options.AutoGrade.Value then break end
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("JJKRemotes")
+                            :WaitForChild("GradeUp")
+                            :FireServer()
+                    end)
+                end
+            end)
+        else
+            Fluent:Notify({
+                Title = "Auto Grade",
+                Content = "Stopped",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- Auto Prestige (prestiges when possible)
+Tabs.Main:AddToggle("AutoPrestige", {
+    Title = "Auto Prestige",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            Fluent:Notify({
+                Title = "Auto Prestige",
+                Content = "Started – attempting Prestige every 3s",
+                Duration = 4
+            })
+
+            task.spawn(function()
+                while task.wait(3) do   -- longer delay – prestige usually has cooldown / requirements
+                    if not Fluent.Options.AutoPrestige.Value then break end
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("JJKRemotes")
+                            :WaitForChild("Prestige")
+                            :FireServer()
+                    end)
+                end
+            end)
+        else
+            Fluent:Notify({
+                Title = "Auto Prestige",
+                Content = "Stopped",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- You can add more features later...
 
 SaveManager:LoadAutoloadConfig()
