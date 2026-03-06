@@ -3,7 +3,7 @@ local Window = Fluent:CreateWindow({
     Title = "ANGEL HUB v2 | Jujutsu Incremental " .. Fluent.Version,
     SubTitle = "by Ange",
     TabWidth = 160,
-    Size = UDim2.fromOffset(520, 380),  -- slightly taller for more toggles
+    Size = UDim2.fromOffset(520, 380),
     Acrylic = true, 
     Theme = "Darker",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -11,7 +11,7 @@ local Window = Fluent:CreateWindow({
 
 Fluent:Notify({
     Title = "Loaded!",
-    Content = "Angel Hub has succesfully been loaded!",
+    Content = "Angel Hub has succesfully been loaded! (Medium speed loops)",
     Duration = 5
 })
 
@@ -29,28 +29,28 @@ InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
 -- ───────────────────────────────────────────────
---          AUTO FARM SECTION
+--          AUTO FARM SECTION (MEDIUM SPEED)
 -- ───────────────────────────────────────────────
 
-local Section = Tabs.Main:AddSection("Farming")
+local Section = Tabs.Main:AddSection("Farming (Medium Speed)")
 
--- Auto Farm Sukuna (existing)
-Tabs.Main:AddToggle("AutoFarmSukuna", {
-    Title = "Auto Farm Sukuna (Special Grade Boss)",
+-- Auto Farm Gojo – now every 0.08 seconds (balanced)
+Tabs.Main:AddToggle("AutoFarmGojo", {
+    Title = "Auto Farm Gojo (Raid Boss)",
     Default = false,
     Callback = function(enabled)
         if enabled then
             Fluent:Notify({
-                Title = "Auto Farm",
-                Content = "Started – spamming Sukuna boss every 0.1s",
+                Title = "Auto Farm Gojo",
+                Content = "Started – spamming every 0.08s",
                 Duration = 4
             })
 
             task.spawn(function()
-                while task.wait(0.1) do
-                    if not Fluent.Options.AutoFarmSukuna.Value then break end
+                while task.wait(0.08) do
+                    if not Fluent.Options.AutoFarmGojo.Value then break end
                     pcall(function()
-                        local args = {"Special Grade Boss", "Sukuna"}
+                        local args = {"Raid Boss", "Satoru Gojo"}
                         game:GetService("ReplicatedStorage")
                             :WaitForChild("JJKRemotes")
                             :WaitForChild("ResolveCombat")
@@ -60,7 +60,7 @@ Tabs.Main:AddToggle("AutoFarmSukuna", {
             end)
         else
             Fluent:Notify({
-                Title = "Auto Farm",
+                Title = "Auto Farm Gojo",
                 Content = "Stopped",
                 Duration = 3
             })
@@ -68,11 +68,7 @@ Tabs.Main:AddToggle("AutoFarmSukuna", {
     end
 })
 
--- ───────────────────────────────────────────────
---          NEW: AUTO GRADE & AUTO PRESTIGE
--- ───────────────────────────────────────────────
-
--- Auto Grade (tries to level up grade repeatedly)
+-- Auto Grade – now every 0.3 seconds
 Tabs.Main:AddToggle("AutoGrade", {
     Title = "Auto Grade (Upgrade Grade)",
     Default = false,
@@ -80,12 +76,12 @@ Tabs.Main:AddToggle("AutoGrade", {
         if enabled then
             Fluent:Notify({
                 Title = "Auto Grade",
-                Content = "Started – attempting Grade Up every 1s",
+                Content = "Started – attempting every 0.3s",
                 Duration = 4
             })
 
             task.spawn(function()
-                while task.wait(1) do
+                while task.wait(0.3) do
                     if not Fluent.Options.AutoGrade.Value then break end
                     pcall(function()
                         game:GetService("ReplicatedStorage")
@@ -105,7 +101,7 @@ Tabs.Main:AddToggle("AutoGrade", {
     end
 })
 
--- Auto Prestige (prestiges when possible)
+-- Auto Prestige – now every 1 second
 Tabs.Main:AddToggle("AutoPrestige", {
     Title = "Auto Prestige",
     Default = false,
@@ -113,12 +109,12 @@ Tabs.Main:AddToggle("AutoPrestige", {
         if enabled then
             Fluent:Notify({
                 Title = "Auto Prestige",
-                Content = "Started – attempting Prestige every 3s",
+                Content = "Started – attempting every 1s",
                 Duration = 4
             })
 
             task.spawn(function()
-                while task.wait(3) do   -- longer delay – prestige usually has cooldown / requirements
+                while task.wait(1) do
                     if not Fluent.Options.AutoPrestige.Value then break end
                     pcall(function()
                         game:GetService("ReplicatedStorage")
@@ -137,7 +133,5 @@ Tabs.Main:AddToggle("AutoPrestige", {
         end
     end
 })
-
--- You can add more features later...
 
 SaveManager:LoadAutoloadConfig()
