@@ -1,6 +1,6 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-    Title = "ANGEL HUB v2 | Jujutsu Incremental " .. Fluent.Version,
+    Title = "ANGEL HUB v2 | Sailor Piece " .. Fluent.Version,
     SubTitle = "by Ange",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 380),
@@ -11,7 +11,7 @@ local Window = Fluent:CreateWindow({
 
 Fluent:Notify({
     Title = "Loaded!",
-    Content = "Angel Hub has succesfully been loaded! (Medium speed loops)",
+    Content = "Angel Hub has succesfully been loaded!",
     Duration = 5
 })
 
