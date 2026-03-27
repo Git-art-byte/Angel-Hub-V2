@@ -36,7 +36,7 @@ local Section = Tabs.Main:AddSection("Farming (Medium Speed)")
 
 -- Auto Farm Gojo – now every 0.08 seconds (balanced)
 Tabs.Main:AddToggle("AutoFarmGojo", {
-    Title = "Auto Farm Gojo (Raid Boss)",
+    Title = "Auto Farm Best (Raid Boss)",
     Default = false,
     Callback = function(enabled)
         if enabled then
@@ -50,7 +50,7 @@ Tabs.Main:AddToggle("AutoFarmGojo", {
                 while task.wait(0.08) do
                     if not Fluent.Options.AutoFarmGojo.Value then break end
                     pcall(function()
-                        local args = {"Raid Boss", "Satoru Gojo"}
+                        local args = {"Raid Boss", "Heian Era Sukuna"}
                         game:GetService("ReplicatedStorage")
                             :WaitForChild("JJKRemotes")
                             :WaitForChild("ResolveCombat")
