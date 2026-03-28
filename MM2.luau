@@ -15,5 +15,5 @@ local Window = WindUI:CreateWindow({
     BackgroundImageTransparency = 0.42,
     HideSearchBar = true,
     ScrollBarEnabled = false,
-    Window:SetBackgroundImage("rbxassetid://8670625890"),
+    Background = "rbxassetid://8670625890",
  })
