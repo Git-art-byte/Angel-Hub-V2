@@ -20,6 +20,8 @@ local Tabs = {
 ----------------------------------------------------------------
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local NPCFolder = workspace:WaitForChild("NPCs")
@@ -32,7 +34,9 @@ local HitRemote = ReplicatedStorage:WaitForChild("CombatSystem")
 ----------------------------------------------------------------
 local SelectedMob = nil
 local Running = false
-local MaxDistance = 300  -- increased a bit
+local OffsetDistance = 4
+local FarmPosition = "Behind"
+local NoclipEnabled = false
 
 ----------------------------------------------------------------
 -- FUNCTIONS
@@ -42,44 +46,83 @@ local function getCharacter()
 end
 
 local function getHRP()
-    local char = getCharacter()
-    return char:WaitForChild("HumanoidRootPart")
+    return getCharacter():WaitForChild("HumanoidRootPart")
 end
 
 local function equipSword()
     local char = getCharacter()
     if char:FindFirstChild("Ice Queen") then return end
-    
     local tool = LocalPlayer.Backpack:FindFirstChild("Ice Queen")
-    if tool then
-        tool.Parent = char
-    end
+    if tool then tool.Parent = char end
 end
 
 local function cleanName(name)
     return string.gsub(name, "%d+$", "")
 end
 
+-- Noclip
+local function toggleNoclip(state)
+    if NoclipEnabled == state then return end
+    NoclipEnabled = state
+    
+    if state then
+        task.spawn(function()
+            while NoclipEnabled and Running do
+                for _, part in pairs(getCharacter():GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end
+
 ----------------------------------------------------------------
--- GET NEAREST MOB (improved)
+-- TWEEN + FACE MOB
+----------------------------------------------------------------
+local function tweenToTarget(targetHRP)
+    if not targetHRP then return end
+    
+    local hrp = getHRP()
+    local offset = Vector3.new(0, 0, 0)
+    
+    if FarmPosition == "Behind" then
+        offset = targetHRP.CFrame.LookVector * -OffsetDistance
+    elseif FarmPosition == "Front" then
+        offset = targetHRP.CFrame.LookVector * OffsetDistance
+    elseif FarmPosition == "Upper" then
+        offset = Vector3.new(0, OffsetDistance, 0)
+    elseif FarmPosition == "Below" then
+        offset = Vector3.new(0, -OffsetDistance, 0)
+    end
+    
+    local targetCFrame = CFrame.new(targetHRP.Position + offset, targetHRP.Position)
+    
+    local tweenInfo = TweenInfo.new(0.22, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween:Wait()
+end
+
+----------------------------------------------------------------
+-- GET NEAREST MOB
 ----------------------------------------------------------------
 local function getNearestMob(name)
     if not name then return nil end
     local hrp = getHRP()
-    local nearest = nil
-    local shortest = math.huge
+    local nearest, shortest = nil, math.huge
 
     for _, mob in pairs(NPCFolder:GetChildren()) do
         local humanoid = mob:FindFirstChildOfClass("Humanoid")
         local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-        if humanoid and mobHRP and humanoid.Health > 0 then
-            if cleanName(mob.Name) == name then
-                local distance = (hrp.Position - mobHRP.Position).Magnitude
-                if distance <= MaxDistance and distance < shortest then
-                    shortest = distance
-                    nearest = mob
-                end
+        if humanoid and mobHRP and humanoid.Health > 0 and cleanName(mob.Name) == name then
+            local dist = (hrp.Position - mobHRP.Position).Magnitude
+            if dist <= 350 and dist < shortest then
+                shortest = dist
+                nearest = mob
             end
         end
     end
@@ -87,31 +130,49 @@ local function getNearestMob(name)
 end
 
 ----------------------------------------------------------------
--- DROPDOWN
+-- UI
 ----------------------------------------------------------------
 local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     Title = "Nearby Mobs",
-    Values = {}, -- will be refreshed immediately
+    Values = {},
     Multi = false,
     Default = nil,
+    Callback = function(value) SelectedMob = value end
+})
+
+Tabs.Main:AddDropdown("PositionDropdown", {
+    Title = "Autofarm Position",
+    Values = {"Behind", "Front", "Upper", "Below"},
+    Multi = false,
+    Default = "Behind",
     Callback = function(value)
-        SelectedMob = value
+        FarmPosition = value
     end
 })
 
--- Initial + periodic refresh
+Tabs.Main:AddSlider("DistanceSlider", {
+    Title = "Distance",
+    Description = "Offset from mob",
+    Default = 4,
+    Min = 1,
+    Max = 15,
+    Rounding = 1,
+    Callback = function(value)
+        OffsetDistance = value
+    end
+})
+
+-- Refresh
 task.spawn(function()
     while true do
-        local values = {}
-        local added = {}
+        local values, added = {}, {}
         local hrp = getHRP()
 
         for _, mob in pairs(NPCFolder:GetChildren()) do
             local hum = mob:FindFirstChildOfClass("Humanoid")
             local mhrp = mob:FindFirstChild("HumanoidRootPart")
             if hum and hum.Health > 0 and mhrp then
-                local dist = (hrp.Position - mhrp.Position).Magnitude
-                if dist <= MaxDistance then
+                if (hrp.Position - mhrp.Position).Magnitude <= 350 then
                     local base = cleanName(mob.Name)
                     if not added[base] then
                         added[base] = true
@@ -123,13 +184,12 @@ task.spawn(function()
 
         table.sort(values)
         MobDropdown:SetValues(values)
-
         task.wait(4)
     end
 end)
 
 ----------------------------------------------------------------
--- AUTOFARM (Fixed)
+-- AUTOFARM
 ----------------------------------------------------------------
 Tabs.Main:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm",
@@ -137,13 +197,16 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     Callback = function(state)
         Running = state
         
-        if not state then return end
+        if not state then 
+            toggleNoclip(false)
+            return 
+        end
 
         task.spawn(function()
             while Running do
                 pcall(function()
                     if not SelectedMob then 
-                        task.wait(0.5)
+                        task.wait(0.4)
                         return 
                     end
 
@@ -151,23 +214,30 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 
                     local target = getNearestMob(SelectedMob)
                     if not target then
-                        task.wait(0.3) -- important: give time for respawn
+                        task.wait(0.4)
                         return
                     end
 
                     local targetHRP = target:FindFirstChild("HumanoidRootPart")
                     if not targetHRP then return end
 
+                    -- Noclip for Below position
+                    toggleNoclip(FarmPosition == "Below")
+
+                    tweenToTarget(targetHRP)
+
+                    -- Face the mob properly
                     local hrp = getHRP()
+                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
 
-                    -- Teleport behind + slight offset to avoid collision issues
-                    hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 3.5)
-
-                    -- Attack
-                    HitRemote:FireServer()
+                    -- Attack (Fixed - fire multiple times)
+                    for i = 1, 3 do
+                        HitRemote:FireServer()
+                        task.wait(0.05)
+                    end
                 end)
 
-                task.wait(0.06) -- slightly slower than before, more stable
+                task.wait(0.07)
             end
         end)
     end
