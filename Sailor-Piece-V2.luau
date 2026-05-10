@@ -18,115 +18,54 @@ local Tabs = {
 ----------------------------------------------------------------
 -- SERVICES
 ----------------------------------------------------------------
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-
 local NPCFolder = workspace:WaitForChild("NPCs")
 
-local HitRemote = ReplicatedStorage
-    :WaitForChild("CombatSystem")
-    :WaitForChild("Remotes")
-    :WaitForChild("RequestHit")
+local HitRemote = ReplicatedStorage:WaitForChild("CombatSystem")
+    :WaitForChild("Remotes"):WaitForChild("RequestHit")
 
 ----------------------------------------------------------------
 -- VARIABLES
 ----------------------------------------------------------------
-
 local SelectedMob = nil
 local Running = false
-local MaxDistance = 250
+local MaxDistance = 300  -- increased a bit
 
 ----------------------------------------------------------------
 -- FUNCTIONS
 ----------------------------------------------------------------
-
 local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
 local function getHRP()
-    return getCharacter():WaitForChild("HumanoidRootPart")
+    local char = getCharacter()
+    return char:WaitForChild("HumanoidRootPart")
 end
 
 local function equipSword()
     local char = getCharacter()
-
-    if char:FindFirstChild("Ice Queen") then
-        return
-    end
-
+    if char:FindFirstChild("Ice Queen") then return end
+    
     local tool = LocalPlayer.Backpack:FindFirstChild("Ice Queen")
-
     if tool then
         tool.Parent = char
     end
 end
 
--- remove numbers at end
--- Délinquant1 -> Délinquant
--- SpiritFighter3 -> SpiritFighter
 local function cleanName(name)
     return string.gsub(name, "%d+$", "")
 end
 
 ----------------------------------------------------------------
--- GET NEARBY MOB LIST
+-- GET NEAREST MOB (improved)
 ----------------------------------------------------------------
-
-local function getNearbyMobList()
-    local hrp = getHRP()
-
-    local mobs = {}
-    local added = {}
-
-    for _, mob in pairs(NPCFolder:GetChildren()) do
-        local humanoid = mob:FindFirstChildOfClass("Humanoid")
-        local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-
-        if humanoid
-        and humanoid.Health > 0
-        and mobHRP then
-
-            local distance = (hrp.Position - mobHRP.Position).Magnitude
-
-            if distance <= MaxDistance then
-                local baseName = cleanName(mob.Name)
-
-                if not added[baseName] then
-                    added[baseName] = true
-
-                    table.insert(mobs, {
-                        Name = baseName,
-                        Distance = distance
-                    })
-                end
-            end
-        end
-    end
-
-    table.sort(mobs, function(a, b)
-        return a.Distance < b.Distance
-    end)
-
-    local values = {}
-
-    for _, mob in ipairs(mobs) do
-        table.insert(values, mob.Name)
-    end
-
-    return values
-end
-
-----------------------------------------------------------------
--- GET NEAREST MOB
-----------------------------------------------------------------
-
 local function getNearestMob(name)
+    if not name then return nil end
     local hrp = getHRP()
-
     local nearest = nil
     local shortest = math.huge
 
@@ -134,30 +73,25 @@ local function getNearestMob(name)
         local humanoid = mob:FindFirstChildOfClass("Humanoid")
         local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-        if humanoid
-        and mobHRP
-        and humanoid.Health > 0
-        and cleanName(mob.Name) == name then
-
-            local distance = (hrp.Position - mobHRP.Position).Magnitude
-
-            if distance < shortest then
-                shortest = distance
-                nearest = mob
+        if humanoid and mobHRP and humanoid.Health > 0 then
+            if cleanName(mob.Name) == name then
+                local distance = (hrp.Position - mobHRP.Position).Magnitude
+                if distance <= MaxDistance and distance < shortest then
+                    shortest = distance
+                    nearest = mob
+                end
             end
         end
     end
-
     return nearest
 end
 
 ----------------------------------------------------------------
 -- DROPDOWN
 ----------------------------------------------------------------
-
 local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     Title = "Nearby Mobs",
-    Values = getNearbyMobList(),
+    Values = {}, -- will be refreshed immediately
     Multi = false,
     Default = nil,
     Callback = function(value)
@@ -165,75 +99,76 @@ local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     end
 })
 
-----------------------------------------------------------------
--- REFRESH DROPDOWN EVERY 5 SECONDS
-----------------------------------------------------------------
-
+-- Initial + periodic refresh
 task.spawn(function()
     while true do
-        task.wait(5)
+        local values = {}
+        local added = {}
+        local hrp = getHRP()
 
-        local values = getNearbyMobList()
+        for _, mob in pairs(NPCFolder:GetChildren()) do
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            local mhrp = mob:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and mhrp then
+                local dist = (hrp.Position - mhrp.Position).Magnitude
+                if dist <= MaxDistance then
+                    local base = cleanName(mob.Name)
+                    if not added[base] then
+                        added[base] = true
+                        table.insert(values, base)
+                    end
+                end
+            end
+        end
 
+        table.sort(values)
         MobDropdown:SetValues(values)
 
-        -- reset if mob disappeared
-        if SelectedMob and not table.find(values, SelectedMob) then
-            SelectedMob = nil
-        end
+        task.wait(4)
     end
 end)
 
 ----------------------------------------------------------------
--- AUTOFARM
+-- AUTOFARM (Fixed)
 ----------------------------------------------------------------
-
 Tabs.Main:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm",
     Default = false,
-
     Callback = function(state)
         Running = state
+        
+        if not state then return end
 
-        if state then
-            task.spawn(function()
+        task.spawn(function()
+            while Running do
+                pcall(function()
+                    if not SelectedMob then 
+                        task.wait(0.5)
+                        return 
+                    end
 
-                while Running do
-                    task.wait(0.05)
+                    equipSword()
 
-                    pcall(function()
+                    local target = getNearestMob(SelectedMob)
+                    if not target then
+                        task.wait(0.3) -- important: give time for respawn
+                        return
+                    end
 
-                        if not SelectedMob then
-                            return
-                        end
+                    local targetHRP = target:FindFirstChild("HumanoidRootPart")
+                    if not targetHRP then return end
 
-                        equipSword()
+                    local hrp = getHRP()
 
-                        local target = getNearestMob(SelectedMob)
+                    -- Teleport behind + slight offset to avoid collision issues
+                    hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 3.5)
 
-                        -- no mob found yet
-                        if not target then
-                            return
-                        end
+                    -- Attack
+                    HitRemote:FireServer()
+                end)
 
-                        local humanoid = target:FindFirstChildOfClass("Humanoid")
-                        local targetHRP = target:FindFirstChild("HumanoidRootPart")
-
-                        if not humanoid or not targetHRP then
-                            return
-                        end
-
-                        local hrp = getHRP()
-
-                        -- teleport behind mob
-                        hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 3)
-
-                        -- attack spam
-                        HitRemote:FireServer()
-
-                    end)
-                end
-            end)
-        end
+                task.wait(0.06) -- slightly slower than before, more stable
+            end
+        end)
     end
 })
