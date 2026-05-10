@@ -24,8 +24,6 @@ InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
-local Section1 = Tabs.Main:AddSection("AutoFarm")
-local Section2 = Tabs.Main:AddSection("Settings")
 ----------------------------------------------------------------
 -- SERVICES
 ----------------------------------------------------------------
@@ -143,6 +141,8 @@ end
 ----------------------------------------------------------------
 -- UI
 ----------------------------------------------------------------
+local Section1 = Tabs.Main:AddSection("AutoFarm")
+
 local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     Title = "Select Mob",
     Values = {},
@@ -151,56 +151,6 @@ local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
     Callback = function(value) SelectedMob = value end
 })
 
-Tabs.Main:AddDropdown("PositionDropdown", {
-    Title = "Autofarm Position",
-    Values = {"Behind", "Front", "Upper", "Below"},
-    Multi = false,
-    Default = "Behind",
-    Callback = function(value)
-        FarmPosition = value
-    end
-})
-
-Tabs.Main:AddSlider("DistanceSlider", {
-    Title = "AutoFarm Distance",
-    Default = 4,
-    Min = 1,
-    Max = 15,
-    Rounding = 1,
-    Callback = function(value)
-        OffsetDistance = value
-    end
-})
-
--- Refresh
-task.spawn(function()
-    while true do
-        local values, added = {}, {}
-        local hrp = getHRP()
-
-        for _, mob in pairs(NPCFolder:GetChildren()) do
-            local hum = mob:FindFirstChildOfClass("Humanoid")
-            local mhrp = mob:FindFirstChild("HumanoidRootPart")
-            if hum and hum.Health > 0 and mhrp then
-                if (hrp.Position - mhrp.Position).Magnitude <= 350 then
-                    local base = cleanName(mob.Name)
-                    if not added[base] then
-                        added[base] = true
-                        table.insert(values, base)
-                    end
-                end
-            end
-        end
-
-        table.sort(values)
-        MobDropdown:SetValues(values)
-        task.wait(4)
-    end
-end)
-
-----------------------------------------------------------------
--- AUTOFARM
-----------------------------------------------------------------
 Tabs.Main:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm",
     Default = false,
@@ -252,3 +202,53 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
         end)
     end
 })
+
+local Section2 = Tabs.Main:AddSection("Settings")
+
+Tabs.Main:AddSlider("DistanceSlider", {
+    Title = "AutoFarm Distance",
+    Default = 7,
+    Min = 1,
+    Max = 20,
+    Rounding = 1,
+    Callback = function(value)
+        OffsetDistance = value
+    end
+})
+
+Tabs.Main:AddDropdown("PositionDropdown", {
+    Title = "Autofarm Position",
+    Values = {"Behind", "Front", "Upper", "Below"},
+    Multi = false,
+    Default = "Behind",
+    Callback = function(value)
+        FarmPosition = value
+    end
+})
+
+-- Refresh
+task.spawn(function()
+    while true do
+        local values, added = {}, {}
+        local hrp = getHRP()
+
+        for _, mob in pairs(NPCFolder:GetChildren()) do
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            local mhrp = mob:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and mhrp then
+                if (hrp.Position - mhrp.Position).Magnitude <= 350 then
+                    local base = cleanName(mob.Name)
+                    if not added[base] then
+                        added[base] = true
+                        table.insert(values, base)
+                    end
+                end
+            end
+        end
+
+        table.sort(values)
+        MobDropdown:SetValues(values)
+        task.wait(4)
+    end
+end)
+
