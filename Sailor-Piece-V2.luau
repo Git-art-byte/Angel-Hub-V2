@@ -65,8 +65,7 @@ local function equipSword()
     end
 end
 
--- Remove numbers at end
--- Example:
+-- remove numbers at end
 -- Délinquant1 -> Délinquant
 -- SpiritFighter3 -> SpiritFighter
 local function cleanName(name)
@@ -74,7 +73,7 @@ local function cleanName(name)
 end
 
 ----------------------------------------------------------------
--- GET NEARBY MOBS ONLY
+-- GET NEARBY MOB LIST
 ----------------------------------------------------------------
 
 local function getNearbyMobList()
@@ -83,11 +82,14 @@ local function getNearbyMobList()
     local mobs = {}
     local added = {}
 
-    for _, mob in ipairs(NPCFolder:GetChildren()) do
+    for _, mob in pairs(NPCFolder:GetChildren()) do
         local humanoid = mob:FindFirstChildOfClass("Humanoid")
         local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-        if humanoid and humanoid.Health > 0 and mobHRP then
+        if humanoid
+        and humanoid.Health > 0
+        and mobHRP then
+
             local distance = (hrp.Position - mobHRP.Position).Magnitude
 
             if distance <= MaxDistance then
@@ -119,7 +121,7 @@ local function getNearbyMobList()
 end
 
 ----------------------------------------------------------------
--- GET NEAREST MOB OF SELECTED TYPE
+-- GET NEAREST MOB
 ----------------------------------------------------------------
 
 local function getNearestMob(name)
@@ -128,18 +130,20 @@ local function getNearestMob(name)
     local nearest = nil
     local shortest = math.huge
 
-    for _, mob in ipairs(NPCFolder:GetChildren()) do
+    for _, mob in pairs(NPCFolder:GetChildren()) do
         local humanoid = mob:FindFirstChildOfClass("Humanoid")
         local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-        if humanoid and humanoid.Health > 0 and mobHRP then
-            if cleanName(mob.Name) == name then
-                local distance = (hrp.Position - mobHRP.Position).Magnitude
+        if humanoid
+        and mobHRP
+        and humanoid.Health > 0
+        and cleanName(mob.Name) == name then
 
-                if distance < shortest then
-                    shortest = distance
-                    nearest = mob
-                end
+            local distance = (hrp.Position - mobHRP.Position).Magnitude
+
+            if distance < shortest then
+                shortest = distance
+                nearest = mob
             end
         end
     end
@@ -162,7 +166,7 @@ local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
 })
 
 ----------------------------------------------------------------
--- REFRESH EVERY 5 SECONDS
+-- REFRESH DROPDOWN EVERY 5 SECONDS
 ----------------------------------------------------------------
 
 task.spawn(function()
@@ -173,7 +177,7 @@ task.spawn(function()
 
         MobDropdown:SetValues(values)
 
-        -- reset selected if mob disappeared
+        -- reset if mob disappeared
         if SelectedMob and not table.find(values, SelectedMob) then
             SelectedMob = nil
         end
@@ -183,8 +187,6 @@ end)
 ----------------------------------------------------------------
 -- AUTOFARM
 ----------------------------------------------------------------
-
--- Replace your AUTOFARM toggle with this fixed version
 
 Tabs.Main:AddToggle("AutoFarmToggle", {
     Title = "AutoFarm",
@@ -197,44 +199,28 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
             task.spawn(function()
 
                 while Running do
-                    task.wait(0.1)
+                    task.wait(0.05)
 
-                    if not SelectedMob then
-                        continue
-                    end
+                    pcall(function()
 
-                    equipSword()
-
-                    -- ALWAYS search for a new mob
-                    local target = getNearestMob(SelectedMob)
-
-                    if not target then
-                        continue
-                    end
-
-                    local humanoid = target:FindFirstChildOfClass("Humanoid")
-                    local targetHRP = target:FindFirstChild("HumanoidRootPart")
-
-                    if not humanoid or not targetHRP then
-                        continue
-                    end
-
-                    -- attack current mob
-                    repeat
-                        if not Running then
-                            break
+                        if not SelectedMob then
+                            return
                         end
 
-                        -- mob disappeared
-                        if not target.Parent then
-                            break
+                        equipSword()
+
+                        local target = getNearestMob(SelectedMob)
+
+                        -- no mob found yet
+                        if not target then
+                            return
                         end
 
-                        humanoid = target:FindFirstChildOfClass("Humanoid")
-                        targetHRP = target:FindFirstChild("HumanoidRootPart")
+                        local humanoid = target:FindFirstChildOfClass("Humanoid")
+                        local targetHRP = target:FindFirstChild("HumanoidRootPart")
 
                         if not humanoid or not targetHRP then
-                            break
+                            return
                         end
 
                         local hrp = getHRP()
@@ -242,12 +228,10 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
                         -- teleport behind mob
                         hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 3)
 
-                        -- spam remote
+                        -- attack spam
                         HitRemote:FireServer()
 
-                        task.wait(0.05)
-
-                    until humanoid.Health <= 0
+                    end)
                 end
             end)
         end
