@@ -1,7 +1,7 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "ANGEL HUB | Autofarm " .. Fluent.Version,
+    Title = "ANGEL HUB V2| Sailor Piece" .. Fluent.Version,
     SubTitle = "by Ange",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 320),
@@ -15,6 +15,17 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+local Section1 = Tabs.Main:AddSection("AutoFarm")
+local Section2 = Tabs.Main:AddSection("Settings")
 ----------------------------------------------------------------
 -- SERVICES
 ----------------------------------------------------------------
@@ -34,7 +45,7 @@ local HitRemote = ReplicatedStorage:WaitForChild("CombatSystem")
 ----------------------------------------------------------------
 local SelectedMob = nil
 local Running = false
-local OffsetDistance = 4
+local OffsetDistance = 7
 local FarmPosition = "Behind"
 local NoclipEnabled = false
 
@@ -133,7 +144,7 @@ end
 -- UI
 ----------------------------------------------------------------
 local MobDropdown = Tabs.Main:AddDropdown("MobDropdown", {
-    Title = "Nearby Mobs",
+    Title = "Select Mob",
     Values = {},
     Multi = false,
     Default = nil,
@@ -151,8 +162,7 @@ Tabs.Main:AddDropdown("PositionDropdown", {
 })
 
 Tabs.Main:AddSlider("DistanceSlider", {
-    Title = "Distance",
-    Description = "Offset from mob",
+    Title = "AutoFarm Distance",
     Default = 4,
     Min = 1,
     Max = 15,
