@@ -50,7 +50,7 @@ Tabs.Main:AddToggle("AutoFarmGojo", {
                 while task.wait(0.08) do
                     if not Fluent.Options.AutoFarmGojo.Value then break end
                     pcall(function()
-                        local args = {"Raid Boss", "Heian Era Sukuna"}
+                        local args = {"Raid Boss", "Satoru Gojo"}
                         game:GetService("ReplicatedStorage")
                             :WaitForChild("JJKRemotes")
                             :WaitForChild("ResolveCombat")
